@@ -1,0 +1,41 @@
+Default Exception Handler
+1. If u have try-catch block then the catch block with super class Extension then that serves as default exception Handler.
+2. if no try catch then JVM has a default exception handler.
+
+
+Four things the default exception handler of JVM does :
+1. printing name of exception
+2. reason of the exception if any msg passed
+3. stack trace prints ie order in which method is called
+4. terminate program
+
+
+Finally Block Rules:
+ Runs even if exception occurs
+ Runs even if return is in try/catch
+❌ Does NOT run if System.exit() is called...itll terminate current program under execution
+❌ Does NOT run if JVM crashes
+
+
+Can we have a try catch without finally? -> yes
+Can we have a try finally without catch? -> no...its mandatory without it exceptions are not handled and program is terminated
+
+Exceptions have a heirarchy:
+RuntimeException handles Arithmetic Exception....
+therefore whenever we put multiple catch-blocks it should be in heirarchical error:
+
+Throwable is able to handle any excpetion..but it is an anti pattern..
+
+if we have common logic for multiple exceptions ->
+then we do the following : we use 'pipeline' symbol '|' 
+catch(NULLPointer|Arithmetic Exception e)
+
+Anti pattern :
+Never Gulp exceptions ... ie never do just try..catch (Exception e) without writing anything inside the catch block as well..
+coz now program will never terminate.. u wont come to know what has gone wrong in the program...
+
+We can have a try-catch block inside a try catch block..
+we can also have finally inside
+even finally can have a try catch block inside it.
+
+

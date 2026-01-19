@@ -1,3 +1,4 @@
+package L8;
 
 interface Account {
     int balanceEquiry();
@@ -56,7 +57,7 @@ class SavingsAccount extends BankAccount{
     @Override
     public void withdraw(int amt) {
         if (balance - amt < MIN_BAL) {
-            statement = "Withdrawal denied: Min balance ₹1000 required";
+            statement = "Withdrawal denied: Min balance INR1000 required";
         } else {
             balance -= amt;
             statement = "Savings withdrawal: " + amt;
@@ -64,9 +65,9 @@ class SavingsAccount extends BankAccount{
     }
 }
 
-class CurrentAccount extends BankAccount{
+// class CurrentAccount extends BankAccount{
 
-}
+// }
 
 class Employee{
     Account accountType;

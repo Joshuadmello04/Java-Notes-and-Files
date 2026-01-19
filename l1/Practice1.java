@@ -1,5 +1,7 @@
 import java.util.Scanner;
 
+import L8.Employee;
+
 
 //class KeyInput{ // its better to have a class for input stream 
 //	public static Scanner sc = new Scanner(System.in);

@@ -1,0 +1,38 @@
+Multithreading..
+1. only load 1 process..then releas resources and then switch between threads..
+2. if we go for multitasking..every process' resources have to be separately allocated..
+but in Multithreading only 1 process..1 set of resorces and all threads share same resource...thus less resources needed
+
+Ex of Multithreading:
+many ppl go to office..if 100 ppl travel from x to y
+acc to multitasking : 10 ppl come in 10 cars separately
+if 100 ppl come in 100 cars -> more traffic on road..
+every car will need its own resources..more costly
+
+acc to Multithreading : now if 100 ppl sit in 1 bus...resource shared and less costly and efficient utilization of resource
+and lesser time taken as no traffic.ie 99 cars reduced
+
+just extending Threads doesnt make class a thread we need to put in a run() method
+and call obj.start()..now itll behave like multi threads
+
+To create thread : 
+1. extend threads..implement runnable
+2. override the run() method
+3. call start() to the thread...this is when thread is created
+
+Why specifically run() method only :
+CPU needs to know which method is multithreaded..
+and itll know from where it has to continue execution of each thread
+
+Thread LifeCycle:
+1.  Does Not Exist State (before creation of thread)
+    ||
+    ||...(start() is called)
+2.  Runnable State (threads in a queue)
+    ||
+    || (CPU will select one thread)
+3.  Running State
+    ||
+    ||
+    (Execution over)
+4.  Dead State/ Terminated State
