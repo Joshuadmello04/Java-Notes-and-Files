@@ -24,6 +24,53 @@ Why specifically run() method only :
 CPU needs to know which method is multithreaded..
 and itll know from where it has to continue execution of each thread
 
+
+                    +-------------------+
+                    |       NEW         |
+                    | (Thread created)  |
+                    +-------------------+
+                              |
+                              | start()
+                              v
+         +---------------------------------------------+
+         |                  RUNNABLE                   |
+         | (Ready to run / waiting for CPU scheduling) |
+         +---------------------------------------------+
+                              |
+                              | CPU allocates time → run()
+                              v
+                    +-------------------+
+                    |      RUNNING      |
+                    | (Executing code)  |
+                    +-------------------+
+                      |       |       |
+      sleep()/wait()  |       |       |  yield()
+   / join() / I/O     |       |       v
+                      |       |   (Back to Runnable)
+                      |       |
+                      v       |
+              +---------------------+
+              |  BLOCKED / WAITING  |
+              |  / TIMED_WAITING    |
+              +---------------------+
+                      |
+        notify()/notifyAll()
+        sleep time over / I/O done
+        lock acquired
+                      |
+                      v
+         +---------------------------------------------+
+         |                  RUNNABLE                   |
+         +---------------------------------------------+
+                              |
+                              v
+                    +-------------------+
+                    |   TERMINATED      |
+                    | (Dead / Finished) |
+                    +-------------------+
+
+
+
 Thread LifeCycle:
 1.  Does Not Exist State (before creation of thread)
     ||
@@ -36,3 +83,96 @@ Thread LifeCycle:
     ||
     (Execution over)
 4.  Dead State/ Terminated State
+
+5. Block State..for all threads that need to be blocked and released then sent back
+
+
+Two ways to block a thread 
+1. Call sleep() method in milliseconds..if we know time
+2. If we dont know Time then again two more ways 
+    2.1 suspend() method -> can work from anywhere,only availavle to those classes who extend Thread Class
+    2.2 wait() method -> only works on synchronized block, available to all classes ie even if we dont extend thread itll work
+
+If we wish to bring the thread back call :
+if we used wait():  --> only inside synchronized block, safe to use
+    1. notify()
+    2. notifyAll()
+
+if we used suspend() --> anywhere and deprecated
+    1. resume() method
+
+suspend() vs wait()
+
+if run() is not over and we wanna forcefully terminate and kill it 
+-> we call stop() method 
+
+start() - birth of human
+run() - activities in daily life of human
+every part of ur body is doing smth constantly...like separate threads
+sleep with alarm -> sleep(..) method
+sleep without timer we need suspend and wait... -> notify and resume methods
+then when life is over -> dead state
+
+when creating x classes extending threads...we create x+1 threads coz of Main Thread..
+
+To handle execution of threads we can assign priorities
+
+Priority is a selection criteria not executiin criteria
+so even if u set b1.setPriority as 7 and others are 5...it can complete first
+
+for thread info :
+sout(obj) -> Thread[Thread-0,5,main] //id,priority,parent
+
+Thread[Thread-0,5,main]
+Thread[Thread-1,5,]]
+Thread[Thread-2,5,main]
+
+wait() and notify() is only applicable to synchronized block
+besides suspend() we hv wait() method
+
+if we hv 5 threads..the one with highest priority is selected by processor
+
+if we hv threads with equal priority,and we wanna run another thread with similar priority rather than the current,we use the yield method()
+
+we use isAlive() to check if thread is present or completed/dead
+
+I want to switch to another thread with the equal priority. Means with the same priority. I don't want to run the current thread but I want to switch on to some other thread which is having the similar priority. In that case what we can do is we can call the method yield. Okay, there's one more method called as yield.
+
+Y-E-I-L-D, this method.
+
+So, this method is actually meant for this purpose. That is, if you want to...
+
+Release the control or release the selection of that thread from execution and select other thread of the same priority then we can use it. It is just for knowledge purpose. We have rarely used it but I think why not. But whenever you want to use it then yes you can go for it. Just remember whenever you have two threads of the same priority and you whatever cpu is selected you don't want to run that thread and say go to another thread of the same priority but not the current thread then you can miss you want to skip running the current threads then you can make it as a fail Method.
+
+when you want to manually kill a threat, then we have stop() method
+
+resume() is like waking up someonme...u can only wake up a suspended not stopped
+
+but start() cant even work on stopped thread ie no rebirth of dead thread once dead..thats it...
+
+the working of these threads is exactly like human beings...start stop resume suspend..
+
+to create..ull have to use b1 = new B(); then b1.start();
+
+How to start a thread which is stopped?...
+U cant start a thread which is stopped,only if u create a new object altogether then u can start.A dead thread cant be restarted.
+
+
+What are daemon threads?
+- threads running in the background,they have least priority..they run when foreground threads are less
+- ex of daemon thread -> garbage collector.
+- they can only be set before creating a thread..
+
+How to make a thread as a daemon thread?
+-> b1.setDaemon(true); but before starting a thread
+
+if a thread is stopped..it cant be made into a daemon also..illegal state exception
+
+can an existing daemon thread be made into a foreground thread?
+no... it all has to be decided in the start
+
+
+default priori of thread - 5
+min - 1 
+max - 10
+

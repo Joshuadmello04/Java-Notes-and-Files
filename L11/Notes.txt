@@ -20,7 +20,7 @@ Finally Block Rules:
 Can we have a try catch without finally? -> yes
 Can we have a try finally without catch? -> no...its mandatory without it exceptions are not handled and program is terminated
 
-Exceptions have a heirarchy:
+Exceptions have a heirarchy: from subclass to superclass
 RuntimeException handles Arithmetic Exception....
 therefore whenever we put multiple catch-blocks it should be in heirarchical error:
 
