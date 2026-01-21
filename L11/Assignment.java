@@ -12,111 +12,154 @@ Sam covered 100meterss .....
 3. name, start time,end time,time taken
 .......
 */
-
 import java.util.Random;
 import java.util.Scanner;
 
-class Biker extends Thread {
-    private final String name;
-    private final int trackLengthMeters;
-    private int distanceCovered = 0;
+public class Assignment {
+
+    public static void main(String[] args) {
+        Race race = new Race();
+        race.setupRace();
+        race.startRace();
+    }
+}
+
+class Race {
+
+    private static final int BIKER_COUNT = 10;
+
+    private Biker[] bikers = new Biker[BIKER_COUNT];
+    private Thread[] threads = new Thread[BIKER_COUNT];
+
+    public void setupRace() {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("Enter track length (in km): ");
+        int trackLengthKm = sc.nextInt();
+        sc.nextLine();
+
+        for (int i = 0; i < BIKER_COUNT; i++) {
+            System.out.println("Enter biker " + (i + 1) + " name: ");
+            String name = sc.nextLine();
+            bikers[i] = new Biker(name, trackLengthKm);
+        }
+    }
+
+    public void startRace() {
+        countdown();
+
+        for (int i = 0; i < BIKER_COUNT; i++) {
+            threads[i] = new Thread(bikers[i]);
+            threads[i].start();
+        }
+
+        for (int i = 0; i < BIKER_COUNT; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        sortByTimeTaken();
+        RaceDashboard.display(bikers);
+    }
+
+    private void countdown() {
+        try {
+            for (int i = 5; i >= 1; i--) {
+                System.out.println(i);
+                Thread.sleep(1000);
+            }
+            System.out.println("GOOOOO!!!!!");
+            System.out.println();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sortByTimeTaken() {
+        for (int i = 0; i < bikers.length - 1; i++) {
+            for (int j = 0; j < bikers.length - i - 1; j++) {
+                if (bikers[j].getTimeTaken() > bikers[j + 1].getTimeTaken()) {
+                    Biker temp = bikers[j];
+                    bikers[j] = bikers[j + 1];
+                    bikers[j + 1] = temp;
+                }
+            }
+        }
+    }
+}
+
+class Biker implements Runnable {
+
+    private String name;
+    private int trackLengthMeters;
+    private int coveredDistance = 0;
+    private int nextMilestone = 100;
     private long startTime;
     private long endTime;
-    private final Random rand = new Random();
+    private static final Random random = new Random();
 
     public Biker(String name, int trackLengthKm) {
         this.name = name;
         this.trackLengthMeters = trackLengthKm * 1000;
     }
 
-    public String getBikerName() 
-    {
-         return name; 
-    }
-    public long getStartTime() 
-    { 
-        return startTime/1000;
-    }
-    public long getEndTime() 
-    { 
-        return endTime/1000;
-    }
-    public long getTimeTaken() 
-    { 
-        return (endTime - startTime)/1000;
-    }
-
     @Override
     public void run() {
         startTime = System.currentTimeMillis();
-        while (distanceCovered < trackLengthMeters) {
-            int change = 50 + rand.nextInt(100); //randomly change time
-            distanceCovered += change;
-            if (distanceCovered > trackLengthMeters) {
-                distanceCovered = trackLengthMeters;
+
+        while (coveredDistance < trackLengthMeters) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            if(distanceCovered%100 == 0){
-                System.out.println("Biker "+ name + " covered "+ distanceCovered+" ms");
+            int speed = random.nextInt(41) + 10;
+            coveredDistance += speed;
+            // Print 100m milestones
+            if (coveredDistance >= nextMilestone) {
+                System.out.println(name + " completed " + nextMilestone + " meters");
+                nextMilestone += 100;
             }
-             try {
-                Thread.sleep(100); // 100 ms tick
-             } catch (InterruptedException e) {
+            if (coveredDistance > trackLengthMeters) {
+                coveredDistance = trackLengthMeters;
             }
         }
         endTime = System.currentTimeMillis();
     }
+    public long getTimeTaken() {
+        return endTime - startTime;
+    }
+    public String getName() {
+        return name;
+    }
+    public long getStartTime() {
+        return startTime;
+    }
+    public long getEndTime() {
+        return endTime;
+    }
 }
 
-public class Assignment {
-    public static void main(String[] args) throws InterruptedException {
-        Scanner sc = new Scanner(System.in);
-        String[] names = new String[10];
-        System.out.println("Enter names of 10 bikers:");
-        for (int i = 0; i < names.length; i++) {
-            System.out.print("Biker " + (i + 1) + " Name: ");
-            String name = sc.nextLine();
-            names[i] = name;
-        }
-        System.out.print("Enter track length in kms: ");
-        int trackLengthKm = sc.nextInt();
-        //biker threads
-        Biker[] bikers = new Biker[10];
+class RaceDashboard {
+
+    public static void display(Biker[] bikers) {
+        System.out.println();
+        System.out.println("========== FINAL DASHBOARD ==========");
+        System.out.println("Rank | Name | Start Time | End Time | Time Taken (ms)");
+        System.out.println("-----------------------------------------------");
+
         for (int i = 0; i < bikers.length; i++) {
-            //new biker obj coz thread..
-            bikers[i] = new Biker(names[i], trackLengthKm);
-        }
-        // Countdown
-        System.out.println("\nRace starting in...");
-        for (int i = 5; i >= 1; i--) {
-            System.out.println(i);
-            Thread.sleep(1000);
-        }
-        System.out.println("GOOOO!!!!!\n");
-        // Start the race
-        for (Biker b : bikers) {
-            b.start();
-        }
-        // Wait for the bikers to finish
-        for (Biker b : bikers) {
-            b.join();
-        }
-
-        for (int i = 0; i < bikers.length - 1; i++) {
-            for (int j = 0; j < bikers.length - i - 1; j++) {
-                if (bikers[j].getTimeTaken() > bikers[j + 1].getTimeTaken()) {
-                    Biker tmp = bikers[j];
-                    bikers[j] = bikers[j + 1];
-                    bikers[j + 1] = tmp;
-                }
-            }
-        }
-
-        // Dashboard
-        System.out.println("\n--- Race Results ---");
-        System.out.println( "Rank, Name, Start(ms), End(ms), Time(ms)");
-        for(int i = 0; i < bikers.length; i++) {
             Biker b = bikers[i];
-            System.out.println(i+1 + " "+ b.getBikerName()+" "+b.getStartTime() + " "+b.getEndTime());
+            System.out.println(
+                    (i + 1) + " | " +
+                    b.getName() + " | " +
+                    b.getStartTime() + " | " +
+                    b.getEndTime() + " | " +
+                    b.getTimeTaken()
+            );
         }
     }
 }
