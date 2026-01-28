@@ -7,7 +7,7 @@ public class JdbcDemo {
             //Class.forName("org.postgresql.Driver"); was compulsory till v8 of java 
 
             //Step 1 : load Driver
-            Connection con = DriverManager.getConnection("jdbc:postgresql://localhost:<port>/<db name>", "<username>", "<passwd>");
+            Connection con = DriverManager.getConnection("jdbc:postgresql://localhost:5432/test", "postgres", "josh@reb1");
 
             //Step 2 : Statement creation
             Statement stmt = con.createStatement();
