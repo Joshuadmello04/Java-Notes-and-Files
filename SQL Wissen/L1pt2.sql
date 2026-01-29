@@ -16,3 +16,14 @@ insert into EMP(EID,NAME,AGE) values(102,'Badal',23)
 
 
 create table EMP(EID int primary key,NAME varchar(20))
+
+Create or replace procedure abc()
+language sql
+as 
+$$
+ insert into emp values('Badal',23)
+$$;
+
+CALL abc();
+
+alter table emp drop column eid;
