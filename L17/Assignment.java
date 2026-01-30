@@ -152,7 +152,7 @@ public class Assignment
     private static List<Employee> fetchAllEmployees() {
         List<Employee> list = new ArrayList<>();
         try{
-            Connection con = DriverManager.getConnection("jdbc:postgresql://localhost:5432/test", "///", "/////");
+            Connection con = DriverManager.getConnection("jdbc:postgresql://localhost:5432/test", "postgres", "josh@reb1");
             PreparedStatement ps = con.prepareStatement("SELECT employee_id, name, age, gender, salary, designation FROM employees ORDER BY employee_id");
             ResultSet rs = ps.executeQuery();
              while (rs.next()) {
