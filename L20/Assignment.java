@@ -10,7 +10,6 @@ public class Assignment {
         public abstract String getPropertyType();
         public abstract double calculateMaintenance(double area);
     }
-    
     public static class Villa extends Property {
         @Override
         public String getPropertyType() {
@@ -63,14 +62,29 @@ public class Assignment {
         }
     }
     
-    static class Site 
+    static class Site
     {
         int siteId;
         int siteNumber;
         int area;
         String status;
+        Integer ownerId;//can be nullable
     }
-    
+
+    static class User{
+            int userId;
+            String name;
+            String role;
+            String email;
+            String phone;
+    }
+
+    static class Maintenance{
+        double total;
+        double paid;
+        double pending;
+    }
+
     interface UserDAO{
         User login(String email,String password);
     }
@@ -79,10 +93,9 @@ public class Assignment {
     }
     interface MaintenanceDAO {
         void saveMaintenance(int siteId, double amount);
-
         void viewPendingDues();
-
         void payMaintenance(int siteId, double amount);
+        Maintenance getMaintenanceBySiteId(int siteId);
     }
     interface ApprovalDAO{
         void requestOccupancyChange(int siteId,int ownerId,String oldStatus,String newStatus);
@@ -98,31 +111,25 @@ public class Assignment {
                     "SELECT * FROM sites WHERE site_number = ?"
                     );
                     ps.setInt(1, siteNo);
-            
-                    ResultSet rs = ps.executeQuery();        
+
+                    ResultSet rs = ps.executeQuery();
                     if (rs.next()) {
                         Site s = new Site();
                         s.siteId = rs.getInt("site_id");
                         s.siteNumber = rs.getInt("site_number");
                         s.area = rs.getInt("area");
                         s.status = rs.getString("status");
+                        s.ownerId = rs.getObject("owner_id",Integer.class);
                         return s;
                     }
-                } 
+                }
                 catch (Exception e) {
                     e.printStackTrace();
                 }
                 return null;
             }
         }
-        
-        static class User{
-            int userId;
-            String name;
-            String role;
-            String email;
-            String phone;
-        }
+
 
     static class UserDAOImpl implements  UserDAO{
 
@@ -157,17 +164,16 @@ public class Assignment {
             try {
                 Connection con = DBConnection.getInstance().getConnection();
                 PreparedStatement ps = con.prepareStatement("""
-                INSERT INTO maintenance (site_id, total_amount, paid_amount, pending_amount)
-                VALUES (?, ?, 0, ?)
-                ON CONFLICT (site_id)
-                DO UPDATE SET
-                    total_amount = EXCLUDED.total_amount,
-                    pending_amount = EXCLUDED.pending_amount
+                INSERT INTO maintenance (site_id, total_amount, paid_amount)
+                VALUES (?, ?, 0)
+                ON CONFLICT (site_id) DO NOTHING
                     """);
                 ps.setInt(1, siteId);    
                 ps.setDouble(2, amount);
-                ps.setDouble(3, amount);
-                ps.executeUpdate();
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    System.out.println("Maintenance already exists for this site.");
+                }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -179,7 +185,7 @@ public class Assignment {
                 Statement st = con.createStatement();
 
                 ResultSet rs = st.executeQuery("""
-                    SELECT s.site_number, m.total_amount, m.paid_amount, m.pending_amount
+                    SELECT s.site_number, m.total_amount, m.paid_amount, (m.total_amount - m.paid_amount) AS pending_amount
                     FROM maintenance m
                     JOIN sites s ON m.site_id = s.site_id
                 """);
@@ -203,14 +209,12 @@ public class Assignment {
                 Connection con = DBConnection.getInstance().getConnection();
                 PreparedStatement ps = con.prepareStatement("""
                     UPDATE maintenance
-                    SET paid_amount = paid_amount + ?,
-                    pending_amount = pending_amount - ?
-                    WHERE site_id = ? AND pending_amount >= ?
+                    SET paid_amount = paid_amount + ?
+                    WHERE site_id = ? AND (total_amount - paid_amount) >= ?
                 """);
                 ps.setDouble(1, amount);
-                ps.setDouble(2, amount);
-                ps.setInt(3, siteId);
-                ps.setDouble(4, amount);
+                ps.setInt(2, siteId);
+                ps.setDouble(3, amount);
 
                 int rows = ps.executeUpdate();
                 if(rows>0){
@@ -221,6 +225,31 @@ public class Assignment {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+
+        @java.lang.Override
+        public Maintenance getMaintenanceBySiteId(int siteId) {
+            try{
+                Connection con = DBConnection.getInstance().getConnection();
+                PreparedStatement ps = con.prepareStatement("""
+                        SELECT total_amount, paid_amount,
+                                           (total_amount - paid_amount) AS pending
+                                    FROM maintenance
+                                    WHERE site_id = ?
+                        """);
+                ps.setInt(1, siteId);
+                ResultSet rs = ps.executeQuery();
+                if(rs.next()) {
+                    Maintenance m = new Maintenance();
+                    m.total = rs.getDouble("total_amount");
+                    m.paid = rs.getDouble("paid_amount");
+                    m.pending = rs.getDouble("pending");
+                    return m;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
         }
     }
 
@@ -279,72 +308,111 @@ public class Assignment {
                 con.setAutoCommit(false);
 
                 PreparedStatement ps1 = con.prepareStatement("""
-                    SELECT site_id, new_value
-                    FROM approval_requests
-                    WHERE request_id = ?
+                    SELECT ar.site_id, ar.new_value,ar.owner_id, s.area
+                    FROM approval_requests ar
+                    JOIN sites s ON ar.site_id = s.site_id
+                    WHERE ar.request_id = ? AND ar.status = 'PENDING'
                 """);
                 ps1.setInt(1, requestId);
                 ResultSet rs = ps1.executeQuery();
+                if (!rs.next()) {
+                    System.out.println("Invalid or already approved request.");
+                    con.rollback();
+                    return;
+                }
+                int siteId = rs.getInt("site_id");
+                String newStatus = rs.getString("new_value");
+                int ownerId  = rs.getInt("owner_id");
+                int area = rs.getInt("area");
 
-                if (rs.next()) {
-                    int siteId = rs.getInt("site_id");
-                    String newStatus = rs.getString("new_value");
-
-                    PreparedStatement ps2 = con.prepareStatement(
+                //to Update site status
+                PreparedStatement ps2 = con.prepareStatement(
                         "UPDATE sites SET status=? WHERE site_id=?"
-                    );
-                    ps2.setString(1, newStatus);
-                    ps2.setInt(2, siteId);
-                    ps2.executeUpdate();
+                );
+                ps2.setString(1, newStatus);
+                ps2.setInt(2, siteId);
+                ps2.executeUpdate();
 
-                    PreparedStatement ps3 = con.prepareStatement(
-                        "UPDATE approval_requests SET status='APPROVED' WHERE request_id=?"
+                // to assign owner when occupied
+                if ("OCCUPIED".equalsIgnoreCase(newStatus)) {
+                    PreparedStatement psOwner = con.prepareStatement(
+                            "UPDATE sites SET owner_id=? WHERE site_id=?"
                     );
-                    ps3.setInt(1, requestId);
-                    ps3.executeUpdate();
-
-                    con.commit();
-                    System.out.println("Request approved.");
+                    psOwner.setInt(1, ownerId);
+                    psOwner.setInt(2, siteId);
+                    psOwner.executeUpdate();
                 }
 
-                con.setAutoCommit(true);
+                // to Generate maintenance ONCE when occupied
+                if ("OCCUPIED".equalsIgnoreCase(newStatus)) {
+                    double maintenanceAmount = area * 9;
+                    PreparedStatement psMaint = con.prepareStatement("""
+                        INSERT INTO maintenance (site_id, total_amount, paid_amount)
+                        VALUES (?, ?, 0)
+                        ON CONFLICT (site_id) DO NOTHING
+                    """);
+                    psMaint.setInt(1, siteId);
+                    psMaint.setDouble(2, maintenanceAmount);
+                    psMaint.executeUpdate();
+                }
+
+                // to Mark approval as approved
+                PreparedStatement ps3 = con.prepareStatement(
+                        "UPDATE approval_requests SET status='APPROVED' WHERE request_id=?"
+                );
+                ps3.setInt(1, requestId);
+                ps3.executeUpdate();
+
+                con.commit();
+                System.out.println("Request approved successfully.");
 
             } catch (SQLException e) {
+                try {
+                    Connection con = DBConnection.getInstance().getConnection();
+                    con.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
                 e.printStackTrace();
+            } finally {
+                try {
+                    Connection con = DBConnection.getInstance().getConnection();
+                    con.setAutoCommit(true);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
 
     static class Menu {
-    Scanner sc = new Scanner(System.in);
-    UserDAO userDAO = new UserDAOImpl();
-    SiteDAO siteDAO = new SiteDAOImpl();
-    MaintenanceDAO maintenanceDAO = new MaintenanceDAOImpl();
-    ApprovalDAO approvalDAO = new ApprovalDAOImpl();
-    void start() {
-        try {
-            System.out.print("Email: ");
-            String email = sc.next().trim();
-            System.out.print("Password: ");
-            String password = sc.next().trim();
+        Scanner sc = new Scanner(System.in);
+        UserDAO userDAO = new UserDAOImpl();
+        SiteDAO siteDAO = new SiteDAOImpl();
+        MaintenanceDAO maintenanceDAO = new MaintenanceDAOImpl();
+        ApprovalDAO approvalDAO = new ApprovalDAOImpl();
+        void start() {
+            try {
+                System.out.print("Email: ");
+                String email = sc.next().trim();
+                System.out.print("Password: ");
+                String password = sc.next().trim();
 
-            User user = userDAO.login(email, password);
-            if (user == null) {
-                System.out.println("Invalid credentials");
-                return;
+                User user = userDAO.login(email, password);
+                if (user == null) {
+                    System.out.println("Invalid credentials");
+                    return;
+                }
+                System.out.println("Welcome " + user.name);
+                if ("ADMIN".equals(user.role)) {
+                    adminMenu(user);
+                } else {
+                    userMenu(user);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-
-            System.out.println("Welcome " + user.name);
-
-            if ("ADMIN".equals(user.role)) {
-                adminMenu(user);
-            } else {
-                userMenu(user);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-    }
 
     /* ================= ADMIN MENU ================= */
 
@@ -385,7 +453,7 @@ public class Assignment {
             System.out.println("3. Request Occupancy Change");
             System.out.println("4. Logout");
             int choice = sc.nextInt();
-            if(choice == 1) {
+            if (choice == 1) {
                 System.out.print("Enter site number: ");
                 int siteNo = sc.nextInt();
 
@@ -394,32 +462,28 @@ public class Assignment {
                     System.out.println("Site not found");
                     continue;
                 }
-
-                System.out.println("Site Number: " + site.siteNumber);
-                System.out.println("Area: " + site.area);
-                System.out.println("Status: " + site.status);
-
-                System.out.println("\nSelect Property Type:");
-                System.out.println("1. Villa");
-                System.out.println("2. Apartment");
-                System.out.println("3. Independent House");
-                System.out.println("4. Open Site");
-
-                int p = sc.nextInt();
-                Property property = PropertyFactory.createProperty(p);
-                if (property == null) {
-                    System.out.println("Invalid property type");
+                if (site.ownerId == null || site.ownerId != user.userId) {
+                    System.out.println("You do not own this site.");
                     continue;
                 }
 
-                double maintenance = property.calculateMaintenance(site.area);
-                System.out.println("Monthly Maintenance Amount: Rs." + maintenance);
+                System.out.println("\n--- Site Details ---");
+                System.out.println("Site Number : " + site.siteNumber);
+                System.out.println("Area        : " + site.area);
+                System.out.println("Status      : " + site.status);
 
-                maintenanceDAO.saveMaintenance(site.siteId, maintenance);
-                System.out.println("Maintenance saved.");
+                Maintenance m = maintenanceDAO.getMaintenanceBySiteId(site.siteId);
+                if (m == null) {
+                    System.out.println("Maintenance not generated yet.");
+                } else {
+                    System.out.println("\n--- Maintenance Details ---");
+                    System.out.println("Total   : Rs." + m.total);
+                    System.out.println("Paid    : Rs." + m.paid);
+                    System.out.println("Pending : Rs." + m.pending);
+                }
             }
-            else if (choice == 2) {
-                System.out.print("Enter site number: ");
+            else if (choice ==2) {
+                System.out.println("Enter site number: ");
                 int siteNo = sc.nextInt();
 
                 Site site = siteDAO.getSite(siteNo);
@@ -427,18 +491,50 @@ public class Assignment {
                     System.out.println("Site not found");
                     continue;
                 }
+                if (site.ownerId == null || site.ownerId != user.userId) {
+                    System.out.println("You can pay maintenance only for your own site.");
+                    continue;
+                }
+                //if unoccupied, disallow payment
+                if (!"OCCUPIED".equalsIgnoreCase(site.status)) {
+                    System.out.println("Maintenance payment allowed only for occupied sites.");
+                    continue;
+                }
+                Maintenance m = maintenanceDAO.getMaintenanceBySiteId(site.siteId);
+                    if (m == null) {
+                        System.out.println("Maintenance not generated yet.");
+                        continue;
+                    }
+                System.out.println("Pending amount: Rs." + m.pending);
+                System.out.print("Enter amount to pay: ");
+                double amount = sc.nextDouble();
+                maintenanceDAO.payMaintenance(site.siteId, amount);
+            }
 
-                approvalDAO.requestOccupancyChange(
-                    site.siteId,
-                    user.userId,
-                    site.status,
-                    "OCCUPIED"
-                );
-            }
-            else {
-                System.out.println("Logged out (User)");
-                break;
-            }
+                else if (choice == 3) {
+                    System.out.print("Enter site number: ");
+                    int siteNo = sc.nextInt();
+                    Site site = siteDAO.getSite(siteNo);
+                    if (site == null) {
+                        System.out.println("Site not found");
+                        continue;
+                    }
+                    if (site.ownerId != null) {
+                        System.out.println("This site already has an owner.");
+                        continue;
+                    }
+
+                    approvalDAO.requestOccupancyChange(
+                                site.siteId,
+                                user.userId,
+                                site.status,
+                                "OCCUPIED"
+                        );
+                    }
+                    else {
+                        System.out.println("Logged out (User)");
+                        break;
+                    }
         }
     }
 }

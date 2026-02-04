@@ -42,3 +42,12 @@ site_id int unique references sites(site_id).
 total_amount numeric(10,2) not null,
 paid_a
 )
+
+select * from maintenance;
+
+ALTER TABLE maintenance
+DROP COLUMN pending_amount;
+
+SELECT s.site_number, m.total_amount, m.paid_amount, (m.total_amount - m.paid_amount) AS pending_amount
+FROM maintenance m
+JOIN sites s ON m.site_id = s.site_id;
