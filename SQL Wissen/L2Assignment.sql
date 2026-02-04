@@ -9,3 +9,13 @@ CREATE TABLE IF NOT EXISTS employees (
 );
 
 select * from employees;
+
+select * from emp;
+delete from emp where name = 'Badal';
+alter table emp drop column email;
+
+create table Student (ROLLNO int ,NAME varchar(10),STANDARD int);
+
+insert into STUDENT values(11,'Rinki',2);
+insert into STUDENT values(12,'Pinki',3);
+insert into STUDENT values(13,'Chinki',4);
