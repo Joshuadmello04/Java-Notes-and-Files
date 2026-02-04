@@ -1,8 +1,5 @@
-
 import java.sql.*;
 import java.util.Scanner;
-
-
 
 public class Assignment {
     
@@ -80,11 +77,13 @@ public class Assignment {
     interface SiteDAO{
         Site getSite(int siteNumber);
     }
-    interface MaintenanceDAO{
-        void saveMaintenance(int siteId,double amount);
+    interface MaintenanceDAO {
+        void saveMaintenance(int siteId, double amount);
+
         void viewPendingDues();
+
+        void payMaintenance(int siteId, double amount);
     }
-    
     interface ApprovalDAO{
         void requestOccupancyChange(int siteId,int ownerId,String oldStatus,String newStatus);
         void viewPendingRequests();
@@ -124,7 +123,6 @@ public class Assignment {
             String email;
             String phone;
         }
-        
 
     static class UserDAOImpl implements  UserDAO{
 
@@ -194,6 +192,31 @@ public class Assignment {
                         " | Paid: ₹" + rs.getDouble("paid_amount") +
                         " | Pending: ₹" + rs.getDouble("pending_amount")
                     );
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void payMaintenance(int siteId, double amount){
+            try {
+                Connection con = DBConnection.getInstance().getConnection();
+                PreparedStatement ps = con.prepareStatement("""
+                    UPDATE maintenance
+                    SET paid_amount = paid_amount + ?,
+                    pending_amount = pending_amount - ?
+                    WHERE site_id = ? AND pending_amount >= ?
+                """);
+                ps.setDouble(1, amount);
+                ps.setDouble(2, amount);
+                ps.setInt(3, siteId);
+                ps.setDouble(4, amount);
+
+                int rows = ps.executeUpdate();
+                if(rows>0){
+                    System.out.println("Payment of Rs." + amount + " successful.");
+                } else {
+                    System.out.println("Payment failed. Check pending amount.");
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -358,8 +381,9 @@ public class Assignment {
         while (true) {
             System.out.println("\n--- User Menu ---");
             System.out.println("1. View Site & Maintenance");
-            System.out.println("2. Request Occupancy Change");
-            System.out.println("3. Logout");
+            System.out.println("2. Pay Maintenance");
+            System.out.println("3. Request Occupancy Change");
+            System.out.println("4. Logout");
             int choice = sc.nextInt();
             if(choice == 1) {
                 System.out.print("Enter site number: ");

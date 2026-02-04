@@ -2,3 +2,5 @@
 echo *.class > .gitignore
 
 *.class
+
+$env:CLASSPATH = ".;C:\Users\Wissen\Downloads\postgresql-42.7.5.jar"
