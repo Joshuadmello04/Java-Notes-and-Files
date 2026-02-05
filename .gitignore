@@ -1,6 +1,8 @@
 
 echo *.class > .gitignore
 
+*.xml
+*.mig
 *.class
 
 $env:CLASSPATH = ".;C:\Users\Wissen\Downloads\postgresql-42.7.5.jar"
