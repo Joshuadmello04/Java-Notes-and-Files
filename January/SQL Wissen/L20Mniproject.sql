@@ -51,3 +51,6 @@ DROP COLUMN pending_amount;
 SELECT s.site_number, m.total_amount, m.paid_amount, (m.total_amount - m.paid_amount) AS pending_amount
 FROM maintenance m
 JOIN sites s ON m.site_id = s.site_id;
+
+ALTER TABLE sites
+ADD COLUMN owner_id INT REFERENCES users(user_id);

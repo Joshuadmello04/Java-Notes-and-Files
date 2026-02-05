@@ -102,6 +102,8 @@ public class Assignment {
         void viewPendingRequests();
         void approveRequest(int requestId);
     }
+
+
     static class SiteDAOImpl implements SiteDAO{
 
         public Site getSite(int siteNo){
