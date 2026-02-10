@@ -4,7 +4,7 @@ import java.util.concurrent.CyclicBarrier;
 public class CyclicBarrierDemo {
     public static void main(String[] args) {
         try {
-            CyclicBarrier cb = new CyclicBarrier(3,new MyAction());
+            CyclicBarrier cb = new CyclicBarrier(3,new MyAction());//3 threads call await()
             //it means 3 threads complete then call Myaction
             System.out.println("Starting ....");
             for(int i=1;i<11;i++)
@@ -27,6 +27,10 @@ class MyThread implements Runnable{
     @Override
     public void run()
     {
+        /*  Print its name (ex: "Thread 1")
+            Wait at the barrier (cb.await())
+            After barrier breaks, print "Thread 1 again"
+        */
         try {
             System.out.println(name);//thread name
             cb.await();//wait

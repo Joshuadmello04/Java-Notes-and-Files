@@ -33,7 +33,7 @@ public class StreamAssignment {
         employees.add(new Employee("Deepak", 35, "Manager", "Operations", 84000, "Male"));
         employees.add(new Employee("Kriti", 27, "Clerk", "Operations", 52000, "Female"));
 
-        //1. to get highst salary paid employee
+        //1. to get highest salary paid employee
         Employee highest = employees.stream().max(Comparator.comparing(Employee::getSalary)).get();
         System.out.println("Highest Paid Employee : \n"+highest);
         System.out.println("---------------------");

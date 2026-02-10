@@ -32,7 +32,8 @@ class MakeString implements Runnable{
             // sem.acquire();
             // System.out.println(name+" got permission");
             for(int i=0; i<5; i++){
-                ex.exchange(names[i]);
+                String str = ex.exchange(names[i]);
+                System.out.println("From UseString: " + str);
                 Thread.sleep(1000);
             }
         }catch(Exception e){
